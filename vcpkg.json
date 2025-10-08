@@ -1,0 +1,22 @@
+{
+  "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
+  "name": "otclient",
+  "version": "1.0.0",
+  "dependencies": [
+    "boost-asio",
+    "boost-filesystem",
+    "boost-iostreams",
+    "boost-system",
+    "boost-variant",
+    "glew",
+    "lua",
+    "libogg",
+    "libvorbis",
+    "openal-soft",
+    "opengl",
+    "physfs",
+    "zlib",
+    "libpng",
+    "openssl"
+  ]
+}

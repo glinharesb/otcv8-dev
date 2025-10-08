@@ -33,7 +33,9 @@
 #include <regex>
 
 #if not(defined(ANDROID) || defined(FREE_VERSION))
-#include <boost/process.hpp>
+// Disable boost::process due to API changes in Boost 1.67+
+// TODO: Update to use new boost::process v2 API  
+//#include <boost/process.hpp>
 #endif
 #include <locale>
 #include <zlib.h>
@@ -128,6 +130,9 @@ bool ResourceManager::launchCorrect(const std::string& product, const std::strin
     if (binary == m_binaryPath)
         return false;
 
+    // Disabled due to boost::process API changes in Boost 1.67+
+    // TODO: Reimplement using boost::process v2 or native Windows CreateProcess
+#if 0
     boost::process::child c(binary.string());
     std::error_code ec2;
     if (c.wait_for(std::chrono::seconds(5), ec2)) {
@@ -136,6 +141,10 @@ bool ResourceManager::launchCorrect(const std::string& product, const std::strin
 
     c.detach();
     return true;
+#else
+    g_logger.info("Binary update detected, but automatic launch is disabled. Please restart manually.");
+    return false;
+#endif
 #else
     return false;
 #endif

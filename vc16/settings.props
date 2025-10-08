@@ -37,7 +37,9 @@
         vcruntime.lib;
         msvcrt.lib;
         mincore_downlevel.lib;
-        mincore.lib;    
+        mincore.lib;
+        zip.lib;
+        Avrt.lib;
     </OTCLIENT_LIBDEPS>
   </PropertyGroup>
   <PropertyGroup>

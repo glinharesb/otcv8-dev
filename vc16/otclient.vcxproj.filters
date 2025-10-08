@@ -1138,4 +1138,8 @@
       <Filter>Resource Files</Filter>
     </Image>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="Directory.Build.props" />
+    <None Include="init.lua" />
+  </ItemGroup>
 </Project>

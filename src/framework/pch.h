@@ -70,7 +70,15 @@
 #include <boost/asio.hpp>
 #include <boost/beast.hpp>
 
-#include <boost/asio/io_service.hpp>
+// Use io_context instead of deprecated io_service (Boost 1.70+)
+#include <boost/asio/io_context.hpp>
+// Create alias for backward compatibility
+namespace boost {
+namespace asio {
+    typedef io_context io_service;
+}
+}
+
 #include <boost/asio/ip/tcp.hpp>
 #ifndef __EMSCRIPTEN__
 #include <boost/asio/ssl.hpp>

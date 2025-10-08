@@ -36,8 +36,7 @@ void Proxy::terminate()
     boost::asio::post(m_io, [&, self] {
         g_proxies.erase(self);
         disconnect();
-        boost::system::error_code ec;
-        m_timer.cancel(ec);
+        m_timer.cancel();
     });
 }
 
@@ -75,7 +74,7 @@ void Proxy::check(const boost::system::error_code& ec)
             ping();
         }
     }
-    m_timer.expires_from_now(std::chrono::milliseconds(CHECK_INTERVAL));
+    m_timer.expires_after(std::chrono::milliseconds(CHECK_INTERVAL));
     m_timer.async_wait(std::bind(&Proxy::check, shared_from_this(), std::placeholders::_1));
 }
 
@@ -93,7 +92,6 @@ void Proxy::connect()
     auto self(shared_from_this());
     m_resolver.async_resolve(m_host, "http", [self](const boost::system::error_code& ec,
                                                     boost::asio::ip::tcp::resolver::results_type results) {
-        auto endpoint = boost::asio::ip::tcp::endpoint();
         if (ec || results.empty()) {
 #ifdef PROXY_DEBUG
             std::clog << "[Proxy " << self->m_host << "] resolve error: " << ec.message() << std::endl;
@@ -104,11 +102,37 @@ void Proxy::connect()
                 self->m_state = STATE_NOT_CONNECTED;
                 return;
             }
-            endpoint = boost::asio::ip::tcp::endpoint(address, self->m_port);
-        } else {
-            endpoint = boost::asio::ip::tcp::endpoint(*results);
-            endpoint.port(self->m_port);
+            auto endpoint = boost::asio::ip::tcp::endpoint(address, self->m_port);
+            self->m_resolvedIp = endpoint.address().to_string();
+            self->m_socket = boost::asio::ip::tcp::socket(self->m_io);
+            self->m_lastPingSent = std::chrono::high_resolution_clock::now(); // used for async_connect timeout
+            self->m_socket.async_connect(endpoint, [self, endpoint](const boost::system::error_code& ec) {
+                if (ec) {
+                    self->m_state = STATE_NOT_CONNECTED;
+                    return;
+                }
+                boost::system::error_code ecc;
+                self->m_socket.set_option(boost::asio::ip::tcp::no_delay(true), ecc);
+                self->m_socket.set_option(boost::asio::socket_base::send_buffer_size(65536), ecc);
+                self->m_socket.set_option(boost::asio::socket_base::receive_buffer_size(65536), ecc);
+                if (ecc) {
+#ifdef PROXY_DEBUG
+                    std::clog << "[Proxy " << self->m_host << "] connect error: " << ecc.message() << std::endl;
+#endif
+                }
+
+                self->m_state = STATE_CONNECTING_WAIT_FOR_PING;
+                self->readHeader();
+                self->ping();
+#ifdef PROXY_DEBUG
+                std::clog << "[Proxy " << self->m_host << "] connected " << std::endl;
+#endif
+            });
+            return;
         }
+        
+        auto iterator = results.begin();
+        auto endpoint = boost::asio::ip::tcp::endpoint(iterator->endpoint().address(), self->m_port);
         self->m_resolvedIp = endpoint.address().to_string();
         self->m_socket = boost::asio::ip::tcp::socket(self->m_io);
         self->m_lastPingSent = std::chrono::high_resolution_clock::now(); // used for async_connect timeout
@@ -323,7 +347,7 @@ void Session::terminate(boost::system::error_code ec)
             boost::system::error_code ecc;
             m_socket.shutdown(boost::asio::ip::tcp::socket::shutdown_both, ecc);
             m_socket.close(ecc);
-            m_timer.cancel(ecc);
+            m_timer.cancel();
         } else if (m_disconnectCallback) {
             m_disconnectCallback(ec);
         }
@@ -348,7 +372,7 @@ void Session::check(const boost::system::error_code& ec)
 
     selectProxies();
 
-    m_timer.expires_from_now(std::chrono::milliseconds(CHECK_INTERVAL));
+    m_timer.expires_after(std::chrono::milliseconds(CHECK_INTERVAL));
     m_timer.async_wait(std::bind(&Session::check, shared_from_this(), std::placeholders::_1));
 }
 

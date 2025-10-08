@@ -258,8 +258,8 @@ function updateStatus()
   if g_game.isOnline() then return end
   HTTP.postJSON(Services.status, {type="cacheinfo"}, function(data, err)
     if err then
-      g_logger.warning("HTTP error for " .. Services.status .. ": " .. err) 
-      statusUpdateEvent = scheduleEvent(updateStatus, 5000)
+      -- Service not available, silently ignore
+      statusUpdateEvent = scheduleEvent(updateStatus, 60000)
       return
     end
     if topMenu.onlineLabel then
